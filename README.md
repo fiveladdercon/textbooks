@@ -1,18 +1,18 @@
 # Textbooks #
 
-*Textbooks* is a text based command line accounting program for producing income 
-& expense statements from CSV bank statements by using patterns to reconstruct a 
-general ledger.  Patterns that recur year over year can be saved to quickly 
-auto-allocate most records on subsequent years, which means that textbooks
-effectively learns your patterns.
+**Textbooks** is a text based command line accounting program for producing 
+income & expense statements from CSV bank statements by using patterns to 
+reconstruct a general ledger (GL).  Patterns that recur year over year can be 
+saved to quickly auto-allocate most records on subsequent years, which means 
+that textbooks effectively learns your spending patterns over time.
 
 Textbooks has commands for the managing the following steps in report 
 production:
 
 1.  Setting up a Chart of Accounts
-2.  Importing data from CSV statements
+2.  Importing data from CSV bank statements
 3.  Using patterns to reconstruct transactions (allocations & transfers)
-4.  Added, updating or removing entries to refine details
+4.  Creating, reading, updating or deleting entries to refine details
 5.  Reporting the Balance Sheet and Income & Expense Statement
 
 Testbooks stores all data in a human readable text file.  Though there are 
@@ -25,35 +25,39 @@ restructuring the Chart of Accounts; or updating or deleting an import rules.)
 
 ## Textbooks Session ##
 
-$ textbooks ENTITY COMMAND [COMMAND OPTIONS] 
-   [-C | --commit]
+```
+$ textbooks GL [-h | --help] COMMAND [OPTIONS] 
    [-M | --mute | -V | --verbose | -P | --profuse]
    [-N | --no-color]
+   [-C | --commit]
+```
 
+Each invocation of Textbooks is a **session** that reads the data in the 
+specified general ledger (GL) file and executes the given COMMAND.  
 
-Each invocation of Textbooks is a *session* that reads the data in the specified
-ENTITY file and executes the given COMMAND.  
-
-The ENTITY file is written back to disk unless the --commit option is specified. 
-This allows for visual confirmation of the change on STDOUT before the data is 
+The GL file is not written back to disk unless the --commit option is specified. 
+This allows for visual confirmation of changes on STDOUT before the data is 
 changed on disk.
 
 Session messages such as warnings are output to STDERR. The verbosity of session 
 messages is set using the --mute, --verbose or --profuse options.
 
-Output is generally colored, often to highlight the input that was supplied.  
-Add the --no-color option to remove the color when piping the output to a file.
+Session output is generally colored, often to highlight the input that was 
+supplied.  Add the --no-color option to remove the color when piping the output 
+to a file.
 
 Note that session options can be specified anywhere on the command line, though 
-are typically at the end (--commit in particular).  Note also that session short
-form options are uppercase, while command options are lower case.
+are typically added at the end (--commit in particular).  Note also that session
+short form options are uppercase, while command options are lower case.
+
+Commands make use of **Names**, **Patterns**, **Dates** and **Periods**.
 
 
 
 ### Names ###
 
-A *Name* is a shortcut string used to uniquely identify an account in the chart 
-of accounts.  
+A **Name** is a shortcut string used to uniquely identify an account in the 
+chart of accounts.  
 
 The full name of the account could be typed, but the intent is to uniquely 
 identify an account with as few key strokes as possible.
@@ -61,125 +65,241 @@ identify an account with as few key strokes as possible.
 Names are prefixed with the @ symbol to signify that the following string is a 
 Name, but the @ symbol is not part of the Name itself.
 
-Levels in the chart can be identified by separating them with colon (:) 
-characters:
+Levels in the chart of accounts can be identified by separating them with colon 
+(`:`) characters:
 
-   @exp:meals  identifies  *Exp*ense:Discretionary:Food & Drink:*Meals*
+   `@exp:meals`  identifies  **Exp**ense:Discretionary:Food & Drink:**Meals**
 
 Each level can also include a glob:
 
-   @ass:d\*td tfsa  identifies  *Ass*ets:Bank Accounts:*Dave's TD TFSA*
+   `@ass:my\*tfsa`  identifies  **Ass**ets:Bank Accounts:**My** Own **TFSA**
 
 Since globs are interpretted on the command line, the . character has
 the same effect.
 
-   @ass:d.td tfsa  identifies  *Ass*ets:Bank Accounts:*Dave's TD TFSA*
+   `@ass:my.tfsa`  identifies  **Ass**ets:Bank Accounts:**My** Own **TFSA**
+
+Names are case insenstive.
 
 
 
 ### Patterns ###
 
-A *Pattern* is a string used to identify transactions in bank records from their 
-descriptions.  
+A **Pattern** is a string used to identify transactions in bank records from 
+their descriptions.  
 
 Often may different transactions are allocated to the same account. For example, 
-transactions at PETROCAN, ESSO, SHELL and MACEWAN'S are gas stations and are 
-would all be allocated to the @Vehicle:Fuel expense.
+transactions at PETROCAN, ESSO, SHELL and MACEWAN'S are gas stations and would 
+all be allocated to the @Vehicle:Fuel expense.
 
 The Pattern:
 
+```
 PETROCAN | ESSO | SHELL | MACEWAN'S
+```
 
-identifies transactions at any of the gas stations.
+identifies transactions at any of these gas stations.
 
 A Pattern is specified at the command line during allocation, but recurring 
-patterns can be saved in the ENTITY file to aid with the automatic allocation of
-common transactions.
+patterns can be saved in the GL file to aid with the automatic allocation of
+common transactions in future periods.
 
-Command Line  ENTITY file  Description
-^             |            Terms are ORed together, i.e. A or B
-+             &            Terms are ANDed together, i.e. C and D
--             !            Terms are negated, i.e. not E
+Patterns use the following symbols to specify logical operations:
+
+```
+Command Line   GL file    Description
+^              |          Terms are ORed together, i.e. A or B
++              &          Terms are ANDed together, i.e. C and D
+-              !          Terms are negated, i.e. not E
+```
 
 A Pattern is strictly organized as a disjuction (ORs) of conjunctions (ANDs),
 so that bracketting is not required.
 
-TIM & HORTON | BRIDGEHEAD & COFFEE  
+```
+TIM & HORTON | LOCAL & COFFEE & HOUSE
+```
+means 
+```
+(TIM & HORTON) | (LOCAL & COFFEE & HOUSE)
+```
+not
+```
+TIM & (HORTON | LOCAL) & COFFEE & HOUSE
+```
 
-means (TIM & HORTON) | (BRIDGEHEAD & COFFEE)
-not   TIM & (HORTON | BRIDGEHEAD) & COFFEE
+Any of the special characters can be enclosed in square brackets (`[]`) to be a 
+literal in the pattern:
 
-Any of the special characters can be escaped to be a literal in the pattern:
-e.g. TFR\-FR
+```
+TRANSFER[-]FROM
+```
+
+Patterns are case insensitive.
+
+
+
+### Dates ###
+
+A **Date** is a specific day of the year specified in YYYY-MM-DD format.
+
+All dates are specified, reported and stored in this format.
 
 
 
 ### Periods ###
 
-A *Period* is shortcut that specifies an interval of time, for example a year, a 
-month, a day or two weeks etc.
+A **Period** is shortcut that specifies an interval of time, for example a year, 
+a month, a day or two weeks etc.
 
+A Period can be specified by specifying two dates separated by a colon (`:`):
+
+```
+2022-01-01:2022-12-31
+```
+
+The first date is the start date and the second date is the end date.
+
+The start & end dates are inclusive, so that specifying the start and end
+as the same day will result a period of that one day:
+
+```
+2022-03-17:2022-03-17
+```
+
+If you omit the day, the first day of the month is implied for the start date
+and the last day of the month is implied for the end date:
+
+```
+2022-01:2022-03   #  == 2022-01-01:2022-03-31  (i.e. Q1)
+```
+
+If you omit the month, the first month of the year is implied for the start
+date and the last day of the month is implied for the end date:
+
+```
+2021:2022   #  == 2021-01-01:2022-12-31  (i.e. two years)
+```
+
+If you omit the end date, it is implied by the start date, with inferred
+days and months appropriate to the end date:
+
+```
+2022-01-01  #  == 2022-01-01:2022-01-01  (i.e. one day)
+2022-01     #  == 2022-01-01:2022-01-31  (i.e. one month)
+2022        #  == 2022-01-01:2022-12-31  (i.e. one year)
+```
 
 
 ## Textbooks Commands ##
 
-## Chart of Accounts Management ##
-
-$ textbooks ENTITY chart 
-
-Shows all accounts.
 
 
-$ textbooks ENTITY chart PATTERN+
+### Chart of Accounts Management ###
 
-Shows only accounts with PATTERN in name, highlighting the PATTERN.
-Used to identify an account using a few keystrokes.
-Space separated PATTERNs are a single PATTERN to save quoting.
+```
+$ textbooks GL chart 
+```
+
+Shows all accounts with explicit hierarchical names.
 
 
-$ textbooks ENTITY chart --asset     --parent PARENT NUMBER NAME+
-$ textbooks ENTITY chart --liability --parent PARENT NUMBER NAME+
-$ textbooks ENTITY chart --income    --parent PARENT NUMBER NAME+
-$ textbooks ENTITY chart --expense   --parent PARENT NUMBER NAME+
+```
+$ textbooks GL chart @NAME+
+```
+
+Shows only accounts with a matching NAME.  Used to uniquely identify an account 
+using as few keystrokes as possible.
+
+
+```
+$ textbooks GL chart --asset     --parent PARENT NUMBER NAME+
+$ textbooks GL chart --liability --parent PARENT NUMBER NAME+
+$ textbooks GL chart --income    --parent PARENT NUMBER NAME+
+$ textbooks GL chart --expense   --parent PARENT NUMBER NAME+
+```
 
 Creates a new account of the given type.
-PARENT is the unique account number of the parent account.
-NUMBER must be unique number for the new account.
-NAME is a string.  Space separated NAMES are a single NAME to save quoting.
+- PARENT is the unique account number of the parent account.
+- NUMBER must be unique number for the new account.
+- NAME is a string.  Space separated NAMES are a single NAME to save quoting.
+
+Account numbers are only used to uniquely identify an account for the purpose
+of constructing the hierarchy of accounts in the chart.  Once the hierarchy
+has been captured the in GL with account numbers, Names will be used to
+uniquely identify accounts for the purposes of allocation and reporting.
+
+For example, the following chart defines a Fuel account that sits next to the 
+Insurance account in the hierarchy - they both have a unique number (4240 & 4220
+respecively) but share a common parent number (4200), the Vehicle account, which
+in turn has the Expense parent (4000).
+
+```
+ASSET     1000       Assets
+ASSET     1100:1000  Chequing Account
+LIABILITY 2000       Liabilities
+LIABILITY 2100:2000  Line of Credit
+INCOME    3000       Income
+INCOME    3100:3000  Employment
+EXPENSE   4000       Expense
+EXPENSE   4100:4000  House
+EXPENSE   4200:4000  Vehicle
+EXPENSE   4210:4200  Payments
+EXPENSE   4220:4200  Insurance
+EXPENSE   4230:4200  Licensing
+EXPENSE   4240:4200  Fuel
+EXPENSE   4250:4200  Maintenance
+```
+
+Although there are commands to create accounts in the chart, it is in fact
+far easier to just create the chart by hand once you see the pattern.  Use the
+commands to start you off, but then move to hand editing to get the bulk of the
+work done.  Use the chart command (without arguments) to check your hierarchy.
+
+Also the order of accounts in the GL file is retained for reporting purposes.
+So to reorder the accounts, just hand modify the GL file to sort the accounts to
+your liking (and you can renumber if you want, but it's not strictly necessary).
 
 
-The order of accounts in the ENTITY is retained for reporting purposes.
-To reorder the accounts, hand modify the ENTITY file.
+
+### Bank Statement Management ###
 
 
-## Bank Statement Management ##
-
-
-$ textbooks ENTITY import --rules [--account NAME] [PATTERN+]
+```
+$ textbooks GL import --rules [--account NAME] [PATTERN+]
+```
 
 Shows import rules.  Shows all import rules or otherwise filters
 according to the account NAME or PATTERN provided.
 
 
-$ textbooks ENTITY import --files [--account NAME] [PATTERN+]
+```
+$ textbooks GL import --files [--account NAME] [PATTERN+]
+```
 
 Shows all import files.  Shows all files that match the import
 rules or otherwise filters according to the account NAME or 
 PATTERN provided.
 
 
-$ textbooks ENTITY import --account NAME --source GLOB
+```
+$ textbooks GL import --account NAME --source GLOB
+```
 
 Adds an import rule to the given account NAME
 
 
-$ textbooks ENTITY import [--account NAME] [PATTERN+] [-p PERIOD]
+```
+$ textbooks GL import [--account NAME] [PATTERN+] [-p PERIOD]
+```
 
 Import transactions.  Imports all transactions or otherwise
 filters according to the Account NAME or PATTERN provided.
 
 
-$textbooks ENTITY reconcile
+```
+$textbooks GL reconcile
+```
 
 Checks the integrity of the balance of the imported transactions, 
 verifying that the imported balance is the same as the computed
@@ -187,7 +307,9 @@ balance.  This catches "balance discontinuities" that may signify
 an import issue.
 
 
-$textbooks ENTITY deport
+```
+$textbooks CL deport
+```
 
 
 #### Import Scenarios ####
@@ -228,40 +350,14 @@ fails under scenario 5)
 
 
 
-## Allocation ##
-
-$ textbooks ENTITY alloc -r | --rules [NAME]
-
-Displays allocation rules, filtered by Account NAME if provided.
-
-
-$ textbooks ENTITY alloc [-p | --period PERIO] [PATTERN ...]
-
-Displays unallocated actions by account with totals, filtered
-by the PERIOD and/or PATTERN(s) if provided.
-
-This is intented to identify a PATTERN in the actions and
-provide a quick peek at the total.
-
-
-$ textbooks ENTITY alloc [-a | --account NAME] [-p | --period] [PATTERN ...]
-
-Adding at least one account
-
-
-
 ### Selections ###
 
-$ textbooks ENTITY select [@NAME]
-
-$ textbooks ENTITY select [@NAME] PATTERN
-
-$ textbooks ENTITY select [@NAME] PATTERN -- @NAME
-
-$ textbooks ENTITY select [@NAME] PATTERN -- @NAME PATTERN
-
-$ textbooks ENTITY select [@NAME] PATTERN -- @NAME PATTERN @NAME PATTERN
-
+```
+$ textbooks GL select [@NAME]
+$ textbooks GL select [@NAME] PATTERN
+$ textbooks GL select [@NAME] PATTERN -- @NAME
+$ textbooks GL select [@NAME] PATTERN -- @NAME PATTERN
+```
 
 
 #### Allocation Scenarios ####
@@ -290,200 +386,16 @@ $ textbooks ENTITY select [@NAME] PATTERN -- @NAME PATTERN @NAME PATTERN
     investments alternate weeks between children.  Perhaps could be
     selected using a step size in the date.
 
-### Adjustments ###
-
-
-$ textbooks ENTITY entry @NAME ITEM [DEBIT: | :CREDIT] [@NAME [ITEM] [DEBIT: | :CREDIT] ...]
-
-
-
-
-
-
-## Accounting 101 ##
-
-
-### Accounts ###
-
-An *Account* is like a file folder: it has a *name* that identifies a *ledger*,
-which - like a bank statement - is a history of changes that list increases and 
-decreases by date with short notes on the reason for the change.
-
-A collection of accounts are organized into a hierarchy called the *Chart of 
-Accounts*.
-
-Some Accounts track a *state* and changes to that state, while other accounts 
-only track *changes*.
-
-Asset & Liability accounts track *state* and have a balance at any given *point 
-in time*.  The balance is the state of the Account and the ledger is history of 
-how that balance has changed over time.
-
-Income & Expense accounts track *changes* and do not have a balance, though can 
-be totaled over a *period of time*.  The ledger reflects the distribution of the
-aggregate change over time.
-
-Since states and changes are both measured with numbers, a number alone does not 
-tell you whether it represents a state or a change and the context of the number
-is relevant.
-
-
-### Transactions ###
-
-Every transaction affects at least two accounts.  That is why it is called
-a _trans_ action.
-
-For example:
-
-If I get paid, my income increased AND my bank balance increased.
-
-If I buy dinner, my expenses increased AND my bank balance decreased (or
-my credit card balance increased).
-
-If I pay off my credit card, the amount owing on the card decreased AND
-my bank balance decreased.
-
-
-So unless at least two ledgers are updated, a change has not been properly 
-tracked.
-
-
-### Debits & Credits ###
-
-Though accounts track a typical flow of money, all accounts can be increased
-or decreased.
-
-Though normally my income increases each time I get paid, if I get overpaid 
-and have pay back the overpayment, my income decreased (AND my bank balance 
-decreased).
-
-Though normally when I buy stuff my expenses increase, if I return something, 
-my expenses decreased (AND my bank balance increased or my credit card balance
-decreased).
-
-Rather than using postive values to reflect increases and negative values to
-reflect decreases, accountants use *debits* & *credits* which always postive
-values.
-
-
-
-ENTRY                                                                       , 2022-12-29
-────────────────────────────────────────────────────────────────────────────────────────
-@Expense:Discretionary:Home Decor
-    DOLLARAMA # 886 OTTAWA                                      ,      11.30,
-@Liabilities:TD VISA
-    DOLLARAMA # 886 OTTAWA                                      ,           ,      11.30
-
-
-
-GL File
--------
-
-EXPENSE Expense:Discretionary:Home Decor
-────────────────────────────────────────────────────────────────────────────────────────
-| DOLLARAMA
-
-
-Selection File / Output
-
-
-Allocation
-----------
-
-$ DOLLARAMA -- @Exp:Other
-
-| DOLLARAMA
---
-@Exp:Other
-
-
-
-$ MSP 303 -- @Exp:Condo
-
-| MSP 303
---
-@Exp:Condo Fees  // includes water payments
-
-Then manually split off water?
-
-
-Transfer
-
-@JCHQ
-| PYT TO: & 1234
---
-@DCHQ
-| PYT FRM: & 9876
-
-
-1. Use *Selections* to pick-off transactions:
-   - Allocation:       Pattern -> @Name          (e.g.        MCDONALDS  -> @Exp:Fast.Food             )
-   - Transfer  :       Pattern -> @Name Pattern  (e.g.        PYT TO C/C -> @VISA           PAYMENT    )
-                 @Name Pattern -> @Name Pattern  (e.g. @JCHQ  PYT TO 123 -> @DCHQ           PYT FRM 987)
-
-2. Save common recurring transactions.  i.e. the "low hanging fruit".
-
-3. Hammer out the unique transactions without saving.
-
-4. Handle unusual scenarios:
-   a) Separating home & auto insurance or D/K life insurance by amount
-      > Use Limits
-   b) Separating water utility from condo fees
-      > Use i-iii below
-   c) Alternating BRESP & ERESP payments by date
-      > Use i-iii below
-
-   i)   Dump uncommitted entries to a file, edit file then submit
-   ii)  Commit then select entries to fix and dump to file, edit file & submit
-   iii) Commit then use command line to select & fix entries.
-
-
-
-Terminology
-
-Entity <-> General Ledger (GL)
-Chart
-Journal Entry <-> Transaction
-Account
-Ledger
-Action <-> Record
-Debit
-Credit
-Amount
-Balance
-Item
-
-Change, State
-
-Period, Date
-Name
-Pattern
-Limit
-Import: import rule vs imported files vs imported actions
-Selection: selection rule vs selected actions
-
-Session
-Source: path, expanded path
-
-
-To Do
-=====
-
-1.  Update import rule reporting to highlight new rule (??)
-2.  Refactor: 
-    - @NAME convention in early commands.
-    - Selection => Rule.  A Rule yields a Selection of Actions.
-3.  - Organize input/output accross classes
-      - composition?  i.e. does the account get/put/display the ledger?
-      - get/put storage strings
-      - display display strings
-    - Remove Allocation
-4.  Clean-up, standardize & comment code
-    - Account - Done
-5.  README documentation
-6.  Create new repo & publisth
-
-
-
-
-
+### Fine Tuning with Entries ###
+
+```
+$ textbooks GL entry RANGE [RANGE ...] [-d | --delete]
+```
+
+```
+$ textbooks GL enter @NAME DATE ITEM+     [DEBIT, | ,CREDIT] 
+                     @NAME [DATE] [ITEM+] [DEBIT, | ,CREDIT]
+                     [...]
+```
+
+### Reporting ###
