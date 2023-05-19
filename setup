@@ -1,0 +1,63 @@
+#┌─────────────────────────────────────────────────────────────────────────────┐
+#│ VARIABLES                                                                   │
+#└─────────────────────────────────────────────────────────────────────────────┘
+
+#
+# TEXTBOOKS is the development directory
+#
+export TEXTBOOKS=$PWD
+
+#┌─────────────────────────────────────────────────────────────────────────────┐
+#│ MODULES                                                                     │
+#└─────────────────────────────────────────────────────────────────────────────┘
+
+#
+# Load pmocha for testing
+#
+if [ ! -f "mod/pmocha/setup" ]
+then
+	git clone https://github.com/fiveladdercon/pmocha mod/pmocha
+fi
+pushd mod/pmocha; source setup; popd
+
+#┌─────────────────────────────────────────────────────────────────────────────┐
+#│ COMMANDS                                                                    │
+#└─────────────────────────────────────────────────────────────────────────────┘
+
+#
+# Re-initialize the setup
+#
+function setup() {
+    CWD=$PWD
+	cd $TEXTBOOKS
+	source setup
+	cd $CWD
+}
+
+#
+# Run the test suite.
+#
+function testsuite() {
+	pmocha $TEXTBOOKS/test/*.mpl
+}
+
+#
+# Run the textbooks script.
+#
+function textbooks() {
+	perl $TEXTBOOKS/textbooks.pl "$@"
+}
+
+#┌─────────────────────────────────────────────────────────────────────────────┐
+#│ REPORT                                                                      │
+#└─────────────────────────────────────────────────────────────────────────────┘
+
+echo "┌───────────────────────────────────────────────────────────────────────────────────┐"
+echo "│ TEXTBOOKS                                                                         │"
+echo "├───────────────┬───────────────────────────────────────────────────────────────────┘"
+echo "│ \$TEXTBOOKS    │ $TEXTBOOKS"
+echo "├───────────────┼────────────────────────────────────────────────────────────────────"
+echo "│ textbooks     │ Run the textbooks accounting application.                          "
+echo "│ testsuite     │ Run the full suite of tests.                                       "
+echo "│ setup         │ Reinitialize the setup.                                            "
+echo "└───────────────┴────────────────────────────────────────────────────────────────────"
