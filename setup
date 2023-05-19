@@ -11,13 +11,12 @@ export TEXTBOOKS=$PWD
 #│ MODULES                                                                     │
 #└─────────────────────────────────────────────────────────────────────────────┘
 
+# Initialize and update submodules
+git submodule update --init --recursive
+
 #
 # Load pmocha for testing
 #
-if [ ! -f "mod/pmocha/setup" ]
-then
-	git clone https://github.com/fiveladdercon/pmocha mod/pmocha
-fi
 pushd mod/pmocha; source setup; popd
 
 #┌─────────────────────────────────────────────────────────────────────────────┐
