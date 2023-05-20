@@ -133,12 +133,18 @@ sub cyan    { return &color($CYAN   , @_); }
 # Console::warn(format, ...)
 # Console::error(format, ...)
 #
-# Verbosity controlled session messaging methods that print to STDERR instead of STDOUT.
+# Verbosity controlled session messaging methods that print to STDERR instead of
+# STDOUT.
 #
-sub info    { my $level = shift; &stderr(        "** INFO  : %s\n", sprintf(shift, @_) ) if $VERBOSITY >= $level; }
-sub note    {                    &stderr(        "** NOTE  : %s\n", sprintf(shift, @_) ) if $VERBOSITY >= 1     ; }
-sub warn    {                    &stderr(&yellow("** WARN  : %s\n", sprintf(shift, @_)));                         }
-sub error   {                    &stderr(&red   ("** ERROR : %s\n", sprintf(shift, @_))); exit unless $TESTING;   }
+# INFO  - normal text, custom verbosity level.
+# NOTE  - normal text, normal verbosity level.
+# WARN  - yellow text, always shown.
+# ERROR - red text   , always shown, exiting (unless testing).
+#
+sub info    { my $level = shift; &stderr(        "** INFO  : %s\n", sprintf(shift, @_) ) if $VERBOSITY >= $level;  }
+sub note    {                    &stderr(        "** NOTE  : %s\n", sprintf(shift, @_) ) if $VERBOSITY >= $NORMAL; }
+sub warn    {                    &stderr(&yellow("** WARN  : %s\n", sprintf(shift, @_)));                          }
+sub error   {                    &stderr(&red   ("** ERROR : %s\n", sprintf(shift, @_))); exit unless $TESTING;    }
 
 
 
