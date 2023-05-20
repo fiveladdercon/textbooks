@@ -110,7 +110,7 @@ sub display {
 	my $Entry = shift;
 	my $entry = defined $Entry->number ? sprintf("%06d", $Entry->number) : '';
 	$string   = sprintf("ENTRY   %s\n", $entry);
-	$string  .= $SINGLE::CHANGE;
+	$string  .= $CHANGE::LINE;
 	foreach my $debit (@{$Entry->{debits}}) {
 		$string .= $debit->{Account}->display(entry => 1);
 		$string .= $debit->{Action}->display(entry => 1);

@@ -127,11 +127,6 @@ sub put {
 			&output("* %s\n", $Account->import);
 			&output($Account->line);
 		}
-		if ($Account->Allocation) {
-			print("Output ALLOCATION\n");
-			&output($Account->Allocation->put);
-			&output($Account->line);
-		}
 		if (scalar $Account->Selections) {
 			&output(join("\n", map { $_->put } $Account->Selections));
 			&output($Account->line);
@@ -1516,25 +1511,21 @@ sub reportLedgers {
 		next unless @Actions;
 		if ($Account->balanced and not $Pattern) {
 			$HEADER = $STATE::HEADER;
-			$ACTION = $STATE::ACTION;
 			$FOOTER = $STATE::NET;
 		} else {
 			$HEADER = $CHANGE::HEADER;
-			$ACTION = $CHANGE::ACTION;
 			$FOOTER = $CHANGE::NET;
 		}
 		my $debits  = 0;
 		my $credits = 0;
 		my @lines   = ();
 		foreach my $Action (@Actions) {
-			my $date    = $Action->date;    next if $Period  and not $Period->contains($date);
-			my $item    = $Action->item;    next if $Pattern and not $Pattern->matches($item);
-			my $entry   = $Action->entry;   
-			my $debit   = $Action->debit;   $debits  += $debit;
-			my $credit  = $Action->credit;  $credits += $credit;
-			my $balance = $Action->balance; $balance = undef if $Pattern;
-			my $line    = sprintf($ACTION, $date, $entry, $item, Amount::columns($debit, $credit, $balance));
-			push @lines, $Pattern ? $Pattern->matches($line) : $line;
+			next if $Period  and not $Period->contains($Action->date);
+			next if $Pattern and not $Pattern->matches($Action->item);
+			$Action->{Pattern} = $Pattern;
+			$debits  += $Action->debit;
+			$credits += $Action->credit;
+			push @lines, $Action->display(ledger => 1, balanced => $Account->balanced);
 		}
 		next unless @lines;
 		Console::stdout($HEADER, $Account->display, $Period ? $Period->string : undef);
@@ -1577,7 +1568,7 @@ sub reportIncomeExpense {
 		$net += $explicit unless $Account->Parent;
 		$implicit = Amount::column($implicit);
 		$implicit = Console::cyan($implicit) if $Account->Children;
-		Console::stdout($NET::LINE, $Account->identifier(implicit => 1), $implicit);
+		Console::stdout($NET::ACCOUNT, $Account->identifier(implicit => 1), $implicit);
 	}
 	Console::stdout($NET::FOOTER, Amount::column($net));
 }
@@ -1596,7 +1587,7 @@ sub reportBalanceSheet {
 		$net += $explicit unless $Account->Parent;
 		$implicit = Amount::column($implicit);
 		$implicit = Console::cyan($implicit) if $Account->Children;
-		Console::stdout($NET::LINE, $Account->identifier(implicit => 1), $implicit);
+		Console::stdout($NET::ACCOUNT, $Account->identifier(implicit => 1), $implicit);
 	}
 	Console::stdout($NET::FOOTER, Amount::column($net));
 }
@@ -1698,11 +1689,11 @@ sub rules {
 		my $imports    = ($import and $Account->import);
 		next unless $selections or $imports;
 		Console::stdout("%s\n", $Account->display);
-		Console::stdout($SINGLE::CHANGE);
+		Console::stdout($CHANGE::LINE);
 		Console::stdout("* %s\n", $Account->import) if $imports;
-		Console::stdout($SINGLE::CHANGE) if $imports and $selections;
+		Console::stdout($CHANGE::LINE) if $imports and $selections;
 		Console::stdout(join("\n", map {$_->display} $Account->Selections)) if $selections;
-		Console::stdout("%s\n\n", $SINGLE::CHANGE);
+		Console::stdout("%s\n\n", $CHANGE::LINE);
 	}
 }
 

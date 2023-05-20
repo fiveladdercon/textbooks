@@ -25,6 +25,9 @@ sub new {
 	return bless $Action, $class;
 }
 
+# A transaction has at least two Actions - at least one debit and at least one 
+# credit.  Actions are bound together in an Entry.
+
 #───────────────────────────────────────────────────────────────────────────────────────────────────
 # Attributes
 #───────────────────────────────────────────────────────────────────────────────────────────────────
@@ -69,7 +72,7 @@ sub settled {
 # Properties
 #───────────────────────────────────────────────────────────────────────────────────────────────────
 
-# $Action->amount => numbers
+# $Action->amount => number
 #
 # Returns the debit or credit amount for limit checking.
 #
@@ -123,24 +126,44 @@ sub net {
 #
 # Returns the action as a highlighted display string.
 # 
-# ledger => 1  formatted for ledger reports
-# entry  => 1  formatted for Entry reports
+# ledger   => 1        formatted for ledger reports
+# balanced => 1        formatted for ledgers with balances
+# entry    => 1        formatted for Entry reports
 #
 sub display {
 	my $Action  = shift;
 	my %options = @_;
 	my $string  = "";
+	my $Pattern = $Action->Pattern;
 	my $date    = $Action->date;
 	my $entry   = $Action->entry;
 	my $item    = $Action->item;
 	my $debit   = &Amount::column($Action->debit);
 	my $credit  = &Amount::column($Action->credit);
+	my $balance = &Amount::column($Action->balance, 1);
 	if ($options{ledger}) {
-		$string = sprintf($CHANGE::ACTION, $date, $entry, $item, $debit, $credit);
+		# Clip items to 41 characters to keep the report box lines in the right
+		# place.  This is because there is a slight difference in format between
+		# the GL and the report which comes from the fact that commas are 
+		# omitted or replaced with padded box lines.
+		#
+		# GL     : %10s, %6s, %-44s, %10s, %10s, %10s
+		# Report : %10s %6s %-41s │ %10s │ %10s │ %10s │
+		#              +   +     -      -      -      --
+		$item = substr($item, 0, 38)."..." if length($item) > 41;
+		if ($options{balanced} and not $Pattern) {
+			# Show the balance if you're supposed to, but not if a Pattern was
+			# used to select the Action since the balance won't make much sense.
+			$string = sprintf($STATE::ACTION, $date, $entry, $item, $debit, $credit, $balance);
+		} else {
+			$string = sprintf($CHANGE::ACTION, $date, $entry, $item, $debit, $credit);
+		}
 	} elsif ($options{entry}) {
 		$string = sprintf("    %10s, %-48s, %10s, %10s\n", $date, $item, $debit, $credit);
 	}
-	return $Action->Pattern->matches($string) if $Action->Pattern;
+	# Pattern matching must happen after box drawing since box drawing
+	# characters are not counted properly in string formatting.
+	return $Pattern->matches($string) if $Pattern;
 	return $string;
 }
 
@@ -188,7 +211,9 @@ sub get {
 
 # import Action(Line) => Action
 #
-# Constructs an Action from a bank record Line.
+# Constructs an Action from a bank record Line, which has a slightly different
+# format than a GL Line.  Most notably bank records are from the bank's point
+# of view, not ours.
 #
 sub import {
 	my $Action = shift; $Action = new Action unless ref $Action;
@@ -199,12 +224,12 @@ sub import {
 
 	#
 	# Bank statements are from the bank's perspective, which is the opposite
-	# of mine: A chequing account is a liability for the bank, and credits
+	# of ours: A chequing account is a liability for the bank, and credits
 	# increase the liability, while debits decrease the liability.  From
-	# my perspective, however, the chequing account is an asset, so debits
+	# our perspective, however, the chequing account is an asset, so debits
 	# should increase the asset, while credits decrease the asset.
 	# 
-	# In the following I flip the debit/credit to flip perspectives.
+	# In the following the debits & credits are flipped to flip perspectives.
 	#
 
 	$Action->{date}    = "${yyyy}-${mm}-${dd}";

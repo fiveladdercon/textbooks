@@ -121,7 +121,7 @@ sub generation {
 # Returns a horizontal line with a width that depends on Account type.
 #
 sub line {
-	return shift->balanced ? $SINGLE::STATE : $SINGLE::CHANGE;
+	return shift->balanced ? $STATE::LINE : $CHANGE::LINE;
 }
 
 #───────────────────────────────────────────────────────────────────────────────────────────────────
