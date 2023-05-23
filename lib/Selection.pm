@@ -124,16 +124,16 @@ sub source {
 sub display {
 	my $Selection = shift;
 
-	sub _string {
+	sub _display {
 		my $filter = shift;
 		my $string = "";
-		$string .= "@ ".$filter->{Name}->string."\n" if $filter->{Name};
-		$string .= $filter->{Pattern}->string        if $filter->{Pattern};
+		$string .= $filter->{Name}->display(pad => 1)."\n" if $filter->{Name};
+		$string .= $filter->{Pattern}->string              if $filter->{Pattern};
 		return $string;
 	}
 
-	my $source = _string($Selection->{source});
-	my $sink   = _string($Selection->{sink});
+	my $source = _display($Selection->{source});
+	my $sink   = _display($Selection->{sink});
 
 	return sprintf("%s--\n%s", $source, $sink) if $sink;
 	return $source;

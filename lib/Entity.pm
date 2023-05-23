@@ -173,10 +173,10 @@ sub getAccount {
 		my $Name     = $identifier;
 		my @Accounts = $Entity->getAccounts($Name);
 		if (@Accounts == 0) {
-			Console::error("No accounts identified by '%s'", $Name->string);
+			Console::error("No accounts identified by '%s'", $Name->display);
 			return;
 		} elsif (@Accounts > 1) {
-			Console::error("More than one account identified by '%s':\e[0m\n%s", $Name->string, $Entity->readAccounts(Name => $Name));
+			Console::error("More than one account identified by '%s':\e[0m\n%s", $Name->display, $Entity->readAccounts(Name => $Name));
 			return;
 		}
 		return $Accounts[0];
@@ -955,7 +955,7 @@ sub selectActions {
 			$Account->{Name} = $filter->{Name};
 			my $Actions = [];
 			if ($Account->import and (($side eq 'source') or ($filter->{Pattern}))) {
-				#Console::error('@%s sink identifies the @%s source.', $filter->{Name}->string, $Account->{Name}->string) if $Account->{Name} and $filter->{Name};
+				#Console::error('%s sink identifies the %s source.', $filter->{Name}->display, $Account->{Name}->display) if $Account->{Name} and $filter->{Name};
 				foreach my $Action ($Account->Actions) {
 					next if defined $Action->Entry;  # Need entry selection
 					next if defined $Selection->Period and not $Selection->Period->contains($Action->date);
