@@ -14,6 +14,14 @@ sub new {
 # Methods
 #───────────────────────────────────────────────────────────────────────────────────────────────────
 
+# $Limit->add(test:string, threshold:number)
+#
+# Adds a threshold test to the Limit.  The test must be one of '>', '>=', '<' or
+# '<=' and the threshold is on the right side of the test (i.e. > threshold 
+# means the amount must be greater than the threshold).  More than one test can
+# be added (i.e. > lower bound, < upper bound) but there is no checking to 
+# ensure the thresholds delimit a non-empty set.
+#
 sub add {
 	my $Limit     = shift;
 	my $test      = shift;
@@ -21,6 +29,11 @@ sub add {
 	push @{$Limit->{tests}}, [$test, int($threshold)];
 }
 
+
+# $Limit->matches(value) => 0|1
+#
+# Returns 1 if the value meets the threshold tests, 0 otherwise.
+#
 sub matches {
 	my $Limit = shift;
 	my $value = int shift;
@@ -34,31 +47,6 @@ sub matches {
 	return 1;
 }
 
-sub parse {
-	my $Limit  = shift;
-	my $string = shift;
-    my $tokens = $string;
-    my $test   = undef;
-    while ($tokens)  {
-    	if ($tokens =~ s/^([<>]=?)//) {
-    		$test = $1;
-    	} elsif ($tokens =~ s/^(\d+([.]\d+)?)//) {
-    		$threshold = $1;
-    		$Limit->add($test, $threshold);
-    	} else {
-    		$tokens =~ s/^\s+//;
-    	}
-    }
-}
-
-sub string {
-	my $Limit = shift;
-	my @tests = ();
-	foreach my $test (@{$Limit->{tests}}) {
-		push @tests, sprintf('%s %s', @{$test});
-	}
-	return join(' ', @tests);
-}
 
 
 1;

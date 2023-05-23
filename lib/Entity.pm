@@ -1223,24 +1223,27 @@ sub select {
 	my $commit    = shift;
 	my @args      = @_;
 	my $Selection = new Selection;
+	my $Limit     = new Limit;
 	my $terms     = {source => [], sink => []};
 	my $side      = 'source';
+	my $limit     = 0;
 	my $learn     = 0;
 	my $actions   = 0;
 
 	while (@args) {
 		my $op = shift @args;
-		if    (($op eq "-h") or ($op eq "--help"   )) { return &usage($SELECT);                             }
-		elsif (($op eq "-p") or ($op eq "--period" )) { $Selection->{Period} = new Period(shift @args);     }
-		elsif (($op eq "-u") or ($op eq "--under"  )) { $Selection->{Limit}  = new Limit('<', shift @args); }
-		elsif (($op eq "-o") or ($op eq "--over"   )) { $Selection->{Limit}  = new Limit('>', shift @args); }
-		elsif (($op eq "-l") or ($op eq "--learn"  )) { $learn   = 1;                                       }
-		elsif (($op eq "-a") or ($op eq "--actions")) { $actions = 1;                                       }
-		elsif (($op eq "--")                        ) { $side  = 'sink';                                    }
-		elsif (($op =~ m/^@/)                       ) { $Selection->{$side}->{Name} = new Name($op);        }
-		else                                          { push @{$terms->{$side}}, $op;                       }
+		if    (($op eq "-h") or ($op eq "--help"   )) { return &usage($SELECT);                         }
+		elsif (($op eq "-p") or ($op eq "--period" )) { $Selection->{Period} = new Period(shift @args); }
+		elsif (($op eq "-u") or ($op eq "--under"  )) { $limit   = 1; $Limit->add('<', shift @args);    }
+		elsif (($op eq "-o") or ($op eq "--over"   )) { $limit   = 1; $Limit->add('>', shift @args);    }
+		elsif (($op eq "-l") or ($op eq "--learn"  )) { $learn   = 1;                                   }
+		elsif (($op eq "-a") or ($op eq "--actions")) { $actions = 1;                                   }
+		elsif (($op eq "--")                        ) { $side  = 'sink';                                }
+		elsif (($op =~ m/^@/)                       ) { $Selection->{$side}->{Name} = new Name($op);    }
+		else                                          { push @{$terms->{$side}}, $op;                   }
 	}
 
+	$Selection->{Limit}             = $Limit if $limit;
 	$Selection->{source}->{Pattern} = new Pattern(@{$terms->{source}}) if @{$terms->{source}};
 	$Selection->{sink}->{Pattern}   = new Pattern(@{$terms->{sink}})   if @{$terms->{sink}};
 
