@@ -107,9 +107,9 @@ sub family {
 	return @Accounts;
 }
 
-# $Account->generation => 0|1
+# $Account->generation => number
 #
-# Returns the generation number of the account.
+# Returns hierarchical level of the account.
 #
 sub generation {
 	my $Parent = shift->{Parent};
@@ -251,16 +251,6 @@ sub put {
 		$Account->{Parent} ? ':'.$Account->Parent->number : '',
 		$Account->identifier(%options)
 	);
-}
-
-# $Account->record(Line)
-#
-# Adds the a bank record to the Account as a one-sided Action.
-#
-sub record {
-	my $Account = shift;
-	my $Line    = shift;
-	push @{$Account->{Actions}}, import Action($Line);
 }
 
 # $Account->rebalance

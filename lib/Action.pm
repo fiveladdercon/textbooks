@@ -99,7 +99,12 @@ sub entry {
 
 # $Action->identifer => string
 #
-# Returns a uniquely identify string
+# Returns a uniquely identify string.
+#
+# NOTE: this method is only used in an obsolete means to detecting import
+#       collisions.  Since the obsolete method is still around, so is this
+#       supporting method.
+# 
 sub identifier {
 	my $Action  = shift;
 	my $date    = $Action->{date};
