@@ -3,7 +3,6 @@ package Entry;
 #═══════════════════════════════════════════════════════════════════════════════════════════════════
 use Amount();
 use Draw();
-use Console();
 
 sub new {
 	my $invocant = shift;
@@ -18,7 +17,7 @@ sub new {
 }
 
 #───────────────────────────────────────────────────────────────────────────────────────────────────
-# Getters/Setters
+# Attributes
 #───────────────────────────────────────────────────────────────────────────────────────────────────
 
 sub number {
@@ -37,75 +36,75 @@ sub credits {
 }
 
 #───────────────────────────────────────────────────────────────────────────────────────────────────
+# Properties
+#───────────────────────────────────────────────────────────────────────────────────────────────────
+
+# $Entry->valid => 0|1
+#
+# Return if the total debits equals the total credits.
+#
+sub valid {
+	my $Entry   = shift;
+	my $debits  = 0;
+	my $credits = 0;
+	foreach my $debit  ($Entry->debits ) { $debits  += $debit->{Action}->debit;    }
+	foreach my $credit ($Entry->credits) { $credits += $credit->{Action}->credit ; }
+	return Amount::penny($debits) == Amount::penny($credits); # Do an integer compare
+}
+
+
+#───────────────────────────────────────────────────────────────────────────────────────────────────
 # Methods
 #───────────────────────────────────────────────────────────────────────────────────────────────────
 
+# $Entry->action(Account, Action)
+#
+# Adds the Action to the Entry and updates the Entry pointer in the Action.
+#
 sub action {
 	my $Entry   = shift;
 	my $Account = shift;
 	my $Action  = shift;
+	$Action->{Entry} = $Entry;
 	if ($Action->debit) {
-		$Entry->debit($Account, $Action);
+		push @{$Entry->{debits}}, {Account => $Account, Action => $Action};
 	} else {
-		$Entry->credit($Account, $Action);
+		push @{$Entry->{credits}}, {Account => $Account, Action => $Action};
 	}
 }
 
-sub debit {
-	# $Entry->debit($Account, $Action);
-	# $Entry->debit($Account, $date, $item, $amount);
-	my $Entry   = shift;
-	my $Account = shift;
-	my $Action  = $_[0]; 
-	my $date    = shift;
-	my $item    = shift;
-	my $amount  = shift;
-	$Action = $Account->action(date=>$date, item=>$item, debit=>$amount) unless ref $Action;
-	$Action->{Entry} = $Entry;
-	push @{$Entry->{debits}}, {Account => $Account, Action => $Action};
-}
-
+# $Entry->credit(Account, date, item, amount)
+#
+# Creates a credit Action in the Account with the given date, item and amount
+# then adds it to the Entry.
+#
 sub credit {
-	# $Entry->credit($Account, $Action);
-	# $Entry->credit($Account, $date, $item, $amount);
 	my $Entry   = shift;
 	my $Account = shift;
-	my $Action  = $_[0]; 
 	my $date    = shift;
 	my $item    = shift;
 	my $amount  = shift;
-	$Action = $Account->action(date=>$date, item=>$item, credit=>$amount) unless ref $Action;
-	$Action->{Entry} = $Entry;
-	push @{$Entry->{credits}}, {Account => $Account, Action => $Action};
+	$Entry->action($Account, $Account->action(date=>$date, item=>$item, credit=>$amount));
 }
 
-# sub parse {
-# 	my $Entry  = shift;
-# 	my $string = shift;
-# 	foreach my $line (split /\n/, $string) {
-# 		# The + 0 coerces the scalar into a true number.
-# 		if ($line =~ s/^ENTRY\s+//) {
-# 			my $number;
-# 			my ($item, $date) = split /\s*,\s*/, $line;
-# 			($number, $item)  = split /\s{6}/, $item, 2 if $item =~ m/^\d{6}\s{6}/;
-# 			$Entry->{number}  = $number + 0 if defined $number;
-# 			$Entry->{item}    = $item;
-# 			$Entry->{date}    = $date;
-# 		} elsif ($line =~ /,/) {
-# 			my ($account, $debit, $credit) = split /\s*,\s*/, $line;
-# 			# I can see a hand edited entry file only having a name pattern as
-# 			# the account reference, but we'll assume for the moment that that
-# 			# case is unlikely.
-# 			$account =~ s/\s+.*//; # Toss the label & keep only the account id
-# 			if ($debit) {
-# 				push @{$Entry->{debits}}, {Account => $account, amount => $debit + 0};
-# 			} else {
-# 				push @{$Entry->{credits}}, {Account => $account, amount => $credit + 0};
-# 			}
-# 		}
-# 	}
-# }
+# $Entry->debit(Account, date, item, amount)
+#
+# Creates a debit Action in the Account with the given date, item and amount
+# then adds it to the Entry.
+#
+sub debit {
+	my $Entry   = shift;
+	my $Account = shift;
+	my $date    = shift;
+	my $item    = shift;
+	my $amount  = shift;
+	$Entry->action($Account, $Account->action(date=>$date, item=>$item, debit=>$amount));
+}
 
+# $Entry->display(%options) => string
+#
+# Returns the Entry as a highlighted display string.
+#
 sub display {
 	my $Entry = shift;
 	my $entry = defined $Entry->number ? sprintf("%06d", $Entry->number) : '';
@@ -123,14 +122,6 @@ sub display {
 	return $string;
 }
 
-sub valid {
-	my $Entry   = shift;
-	my $debits  = 0;
-	my $credits = 0;
-	foreach my $debit  ($Entry->debits ) { $debits  += $debit->{Action}->debit;    }
-	foreach my $credit ($Entry->credits) { $credits += $credit->{Action}->credit ; }
-	return Amount::penny($debits) == Amount::penny($credits); # Do an integer compare
-}
 
 
 1;

@@ -1043,11 +1043,11 @@ sub createAllocationEntries {
 			my $amount = $Source->amount;
 			my $Entry  = new Entry;
 			if ($Source->debit) {
-				$Entry->debit($source->{Account}, $Source);
+				$Entry->action($source->{Account}, $Source);
 				$Entry->credit($sink->{Account}, $date, $item, $amount);
 			} else {
 				$Entry->debit($sink->{Account}, $date, $item, $amount);
-				$Entry->credit($source->{Account}, $Source);
+				$Entry->action($source->{Account}, $Source);
 			}
 			Console::stdout($Entry->display);
 			$Entry->{number} = ++$Entity->{entry};
