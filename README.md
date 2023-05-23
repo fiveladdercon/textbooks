@@ -33,22 +33,23 @@ $ textbooks GL [-h | --help] COMMAND [OPTIONS]
 ```
 
 Each invocation of Textbooks is a **session** that reads the data in the 
-specified general ledger (GL) file and executes the given COMMAND.  
+specified general ledger (`GL`) file and executes the given `COMMAND`.  
 
-The GL file is not written back to disk unless the --commit option is specified. 
-This allows for visual confirmation of changes on STDOUT before the data is 
-changed on disk.
+The `GL` file is not written back to disk unless the `--commit` option is 
+specified.  This allows for visual confirmation of changes on STDOUT before the 
+data is changed on disk.
 
 Session messages such as warnings are output to STDERR. The verbosity of session 
-messages is set using the --mute, --verbose or --profuse options.
+messages is set using the `--mute`, `--verbose` or `--profuse` options.
 
 Session output is generally colored, often to highlight the input that was 
-supplied.  Add the --no-color option to remove the color when piping the output 
-to a file.
+supplied.  Add the `--no-color` option to remove the color when piping the 
+output to a file.
 
 Note that session options can be specified anywhere on the command line, though 
-are typically added at the end (--commit in particular).  Note also that session
-short form options are uppercase, while command options are lower case.
+are typically added at the end (the `--commit` option in particular).  Note also
+that session short form options are uppercase, while command options are lower 
+case.
 
 Commands make use of **Names**, **Patterns**, **Dates** and **Periods**.
 
@@ -59,25 +60,16 @@ Commands make use of **Names**, **Patterns**, **Dates** and **Periods**.
 A **Name** is a shortcut string used to uniquely identify an account in the 
 chart of accounts.  
 
-The full name of the account could be typed, but the intent is to uniquely 
-identify an account with as few key strokes as possible.
+The full hiearchical name of the account could be typed, but the intent is to 
+uniquely identify an account with as few key strokes as possible.
 
-Names are prefixed with the @ symbol to signify that the following string is a 
-Name, but the @ symbol is not part of the Name itself.
+Names are prefixed with the `@` symbol on the command line to signify that the 
+remaining string is a Name, but the `@` symbol is not part of the Name itself.
 
-Levels in the chart of accounts can be identified by separating them with colon 
-(`:`) characters:
+Hierarchy in the chart of accounts can be identified by separating them with 
+colon (`:`) characters:
 
-   `@exp:meals`  identifies  **Exp**ense:Discretionary:Food & Drink:**Meals**
-
-Each level can also include a glob:
-
-   `@ass:my\*tfsa`  identifies  **Ass**ets:Bank Accounts:**My** Own **TFSA**
-
-Since globs are interpretted on the command line, the . character has
-the same effect.
-
-   `@ass:my.tfsa`  identifies  **Ass**ets:Bank Accounts:**My** Own **TFSA**
+`@exp:meals`  identifies  `**Exp**ense:Discretionary:Food & Drink:**Meals**`
 
 Names are case insenstive.
 
@@ -141,7 +133,7 @@ Patterns are case insensitive.
 
 ### Dates ###
 
-A **Date** is a specific day of the year specified in YYYY-MM-DD format.
+A **Date** is a specific day of the year specified in `YYYY-MM-DD` format.
 
 All dates are specified, reported and stored in this format.
 
@@ -205,7 +197,7 @@ Shows all accounts with explicit hierarchical names.
 
 
 ```
-$ textbooks GL chart @NAME+
+$ textbooks GL chart @NAME
 ```
 
 Shows only accounts with a matching NAME.  Used to uniquely identify an account 
@@ -222,7 +214,10 @@ $ textbooks GL chart --expense   --parent PARENT NUMBER NAME+
 Creates a new account of the given type.
 - PARENT is the unique account number of the parent account.
 - NUMBER must be unique number for the new account.
-- NAME is a string.  Space separated NAMES are a single NAME to save quoting.
+- NAME is a string.  Space separated NAMES on the command line are joined into 
+  a single NAME to save quoting.  This is a rare case where the `@` symbol is
+  not used (i.e. because you are creating an Account Name rather than trying
+  to find one that exists).
 
 Account numbers are only used to uniquely identify an account for the purpose
 of constructing the hierarchy of accounts in the chart.  Once the hierarchy
@@ -252,13 +247,14 @@ EXPENSE   4250:4200  Maintenance
 ```
 
 Although there are commands to create accounts in the chart, it is in fact
-far easier to just create the chart by hand once you see the pattern.  Use the
-commands to start you off, but then move to hand editing to get the bulk of the
-work done.  Use the chart command (without arguments) to check your hierarchy.
+far easier to just work on the chart by hand once you understand the pattern.  
+Use the commands to get you started, but move to hand editing to more easily get 
+the bulk of the work done.  Use the chart command (without arguments) to check 
+your hierarchy.
 
-Also the order of accounts in the GL file is retained for reporting purposes.
-So to reorder the accounts, just hand modify the GL file to sort the accounts to
-your liking (and you can renumber if you want, but it's not strictly necessary).
+Also, the order of accounts in the GL file is retained for reporting purposes.
+So to reorder the accounts, hand modify the GL file to sort the accounts to your
+liking (and you can renumber if you want, but it's not strictly necessary).
 
 
 
