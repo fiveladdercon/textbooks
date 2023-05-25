@@ -1531,7 +1531,14 @@ sub reportLedgers {
 			push @lines, $Action->display(ledger => 1, balanced => $Account->balanced);
 		}
 		next unless @lines;
-		Console::stdout($HEADER, $Account->display, $Period ? $Period->string : undef);
+		# Color in the Account messes up the Period alignment when present.
+		# Normally we'd do Name matching after the sprintf, but in this case the
+		# Period includes a colon character that interfers with the process.  So
+		# instead we just add the number of non-printable characters to the
+		# column width. It would be nice to push this into Console, since it is
+		# a recurring problem.
+		my $width = 57 + length($Account->display) - length($Account->identifier);
+		Console::stdout($HEADER, sprintf("%-${width}s", $Account->display), $Period);
 		foreach my $line (@lines) {
 			Console::stdout($line);
 		}
@@ -1547,7 +1554,7 @@ sub reportTrialBalance {
 	my $totals  = $options{totals};
 	my $debits  = 0;
 	my $credits = 0;
-	Console::stdout($CHANGE::HEADER, "TRIAL BALANCE", $Period ? $Period->string : undef);
+	Console::stdout($CHANGE::HEADER, "TRIAL BALANCE", $Period);
 	foreach my $Account ($Entity->getAccounts()) {
 		my ($debit, $credit, $net) = $Account->totals(totals => $totals, Period => $Period);
 		Console::stdout($CHANGE::ACCOUNT, $Account->identifier, Amount::columns($debit, $credit)) if $debit or $credit;
@@ -1563,7 +1570,7 @@ sub reportIncomeExpense {
 	my %options = @_;
 	my $Period  = $options{Period};
 	my $net     = 0;
-	Console::stdout($NET::HEADER, "INCOME & EXPENSE", $Period ? $Period->string : undef);
+	Console::stdout($NET::HEADER, "INCOME & EXPENSE", $Period);
 	foreach my $Account ($Entity->getAccounts()) {
 		next if $Account->balanced;
 		my ($implicit, $explicit) = $Account->totals(signed => 1, rollup => 1, Period => $Period);
@@ -1643,7 +1650,7 @@ sub report {
 
 	return $Entity->reportLedgers(Name => $Name, Period => $Period, Pattern => $Pattern) || 1 if $Name or $Pattern;
 
-	$date = $Period->{end} if $Period;
+	$date = $Period->end if $Period;
 
 	$Entity->reportBalanceSheet(date => $date);
 	$Entity->reportIncomeExpense(Period => $Period);
