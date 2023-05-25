@@ -2,16 +2,6 @@
 package Console;
 #═══════════════════════════════════════════════════════════════════════════════════════════════════
 
-# Public COLOR constants
-my $RED        = "\e[31m";
-my $GREEN      = "\e[32m";
-my $YELLOW     = "\e[33m";
-my $BLUE       = "\e[34m";
-my $MAGENTA    = "\e[35m";
-my $CYAN       = "\e[36m";
-my $WHITE      = "\e[37m";
-my $CLEAR      = "\e[0m";
-
 # Public VERBOSITY constants
 our $MUTE      = 0;
 our $NORMAL    = 1;
@@ -23,10 +13,20 @@ our $TESTING   = 0;       # Test mode. 0|1
 our $COLOR     = 1;       # Color mode.  0|1
 our $VERBOSITY = $NORMAL; # Verbosity level.  Set to a Verbosity constant.
 
+# Private COLOR constants
+my $RED        = "\e[31m";
+my $GREEN      = "\e[32m";
+my $YELLOW     = "\e[33m";
+my $BLUE       = "\e[34m";
+my $MAGENTA    = "\e[35m";
+my $CYAN       = "\e[36m";
+my $WHITE      = "\e[37m";
+my $CLEAR      = "\e[0m";
+
 # Private test mode variables
-our @STDIN     = ();      # Redirect STDIN
-our @STDOUT    = ();      # Redirect STDOUT
-our @STDERR    = ();      # Redirect STDERR
+my @STDIN      = ();      # Redirect STDIN
+my @STDOUT     = ();      # Redirect STDOUT
+my @STDERR     = ();      # Redirect STDERR
 
 # Setting $TESTING to 1 redirects stdio to internal variables so that they can 
 # be compared to expected values.  The internal variables are not inspected 
