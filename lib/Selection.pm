@@ -77,23 +77,20 @@ sub new {
 	my $class     = ref($invocant) || $invocant;
 	my %options   = @_;
 	my $Selection = {
-		Number => $options{Number},  # Range?
+		#
 		Period => $options{Period},  # Period?
 		Limit  => $options{Limit},   # Limit?
 		source => {},                # {Name?, Pattern}
-		sink   => {},                # {Name , Pattern?}
-		side   => 'source'
+		sink   => {},                # {Name , Pattern?}?
+		#
+		_side  => 'source'           # for parsing
 	};
 	return bless $Selection;
 }
 
 #───────────────────────────────────────────────────────────────────────────────────────────────────
-# Getters/Setters
+# Attributes
 #───────────────────────────────────────────────────────────────────────────────────────────────────
-
-sub Number {
-	return shift->{Number};
-}
 
 sub Period {
 	return shift->{Period};
@@ -104,23 +101,61 @@ sub Limit {
 }
 
 sub sink {
-	my $Selection = shift;
-	my %options   = @_;
-	foreach my $option (keys %options) { $Selection->{sink}->{$option} = $options{$option}};
-	return $Selection->{sink};
+	return shift->{sink};
 }
 
 sub source {
+	return shift->{source};
+}
+
+#───────────────────────────────────────────────────────────────────────────────────────────────────
+# Properties
+#───────────────────────────────────────────────────────────────────────────────────────────────────
+
+# $Selection->is_allocation;
+#
+# Returns true if the Selection has a sink Name but not a sink Pattern.
+#
+sub is_allocation {
 	my $Selection = shift;
-	my %options   = @_;
-	foreach my $option (keys %options) { $Selection->{source}->{$option} = $options{$option}};
-	return $Selection->{source};
+	return ((defined $Selection->{sink}->{Name}) and not (defined $Selection->{sink}->{Pattern}));
+}
+
+# $Selection->is_empty;
+#
+# Returns true if the Selection has no source Pattern.
+#
+sub is_empty {
+	my $Selection = shift;
+	return (not defined $Selection->{source}->{Pattern});
+}
+
+# $Selection->is_query;
+#
+# Returns true if the Selection doesn't have a sink Name.
+#
+sub is_query {
+	my $Selection = shift;
+	return (not defined $Selection->{sink}->{Name});
+}
+
+# $Selection->is_transfer;
+#
+# Returns true if the Selection has a sink Name and a sink Pattern.
+#
+sub is_transfer {
+	my $Selection = shift;
+	return ((defined $Selection->{sink}->{Name}) and (defined $Selection->{sink}->{Pattern}));
 }
 
 #───────────────────────────────────────────────────────────────────────────────────────────────────
 # Methods
 #───────────────────────────────────────────────────────────────────────────────────────────────────
 
+# $Selection->display(%options) => string
+#
+# Returns a display string.
+#
 sub display {
 	my $Selection = shift;
 
@@ -139,37 +174,21 @@ sub display {
 	return $source;
 }
 
-sub is_allocation {
-	my $Selection = shift;
-	return ((defined $Selection->{sink}->{Name}) and not (defined $Selection->{sink}->{Pattern}));
-}
-
-sub is_empty {
-	my $Selection = shift;
-	return (not defined $Selection->{source}->{Pattern});
-}
-
-sub is_query {
-	my $Selection = shift;
-	return (not defined $Selection->{sink}->{Name});
-}
-
-sub is_transfer {
-	my $Selection = shift;
-	return ((defined $Selection->{sink}->{Name}) and (defined $Selection->{sink}->{Pattern}));
-}
-
+# $Selection->parse(string);
+#
+# Assembles a selection from a series of storage strings.
+#
 sub parse {
 	my $Selection = shift;
 	my $string    = shift;
-	my $side      = $Selection->{side};
+	my $side      = $Selection->{_side};
 	my @lines     = split /\n/, $string;
 	foreach my $line (split /\n/, $string) {
 		if ($line =~ s/^\s*@\s*//) {
 			$line =~ s/\s+$//;
 			$Selection->{$side}->{Name} = new Name($line);
 		} elsif ($line =~ m/^\s*--/) {
-			$Selection->{side} = $side = 'sink';
+			$Selection->{_side} = $side = 'sink';
 		} elsif ($line =~ m/^\s*[&+|^!~-]/) {
 			$Selection->{$side}->{Pattern} = new Pattern unless $Selection->{$side}->{Pattern};
 			$Selection->{$side}->{Pattern}->parse($line);
@@ -177,9 +196,14 @@ sub parse {
 	}
 }
 
+# $Selection->put => string
+#
+# Returns a storage string.
+#
 sub put {
 	return shift->display;
 }
+
 
 
 1;

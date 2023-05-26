@@ -1,7 +1,15 @@
 #═══════════════════════════════════════════════════════════════════════════════════════════════════
 package Variable;
 #═══════════════════════════════════════════════════════════════════════════════════════════════════
+use Console();
 
+# Variable::expansion(string) => {}
+#
+# Returns a name, value mapping of environment variables in the given string.
+# Throws an error if the environment variable is not set.
+#
+# e.g.  Variable::expansion("Hello $PWD") => {PWD => "/..."}
+#
 sub expansion {
 	my $string = shift;
 	my $value  = {};
@@ -15,6 +23,13 @@ sub expansion {
 	return $value;
 }
 
+# Variable::expand(string, expansion=undef) => string
+#
+# Replaces environment variable names with values from the given expansion.
+# If the expansion isn't given, it is extracted from the string.
+#
+# e.g.  Variable::expand("Hello $PWD") => "Hello /..."
+#
 sub expand {
 	my $string = shift;
 	my $value  = shift; $value = Variable::expansion($string) unless defined $value;
@@ -26,6 +41,12 @@ sub expand {
 	return $string;
 }
 
+# Variable::contract(string, expansion) => string
+#
+# Replaces environment variable values with names from the given expansion.
+#
+# e.g.  Variable::constract("Hello /...", {PWD => "/..."}) => "Hello ${PWD}"
+#
 sub contract {
 	my $string = shift;
 	my $value  = shift;
@@ -54,7 +75,9 @@ sub new {
 	return bless $Line, $class;
 }
 
-# Getters
+#───────────────────────────────────────────────────────────────────────────────────────────────────
+# Attributes
+#───────────────────────────────────────────────────────────────────────────────────────────────────
 
 sub file {
 	return shift->{file};
@@ -68,8 +91,27 @@ sub string {
 	return shift->{string};
 }
 
-# Methods
+#───────────────────────────────────────────────────────────────────────────────────────────────────
+# Properties
+#───────────────────────────────────────────────────────────────────────────────────────────────────
 
+# $Line->coord => string
+#
+# Returns a file, line number "coordinate" of the line of text.
+#
+sub coord {
+	my $Line = shift;
+	return sprintf("<%s:%d>", $Line->file, $Line->number);
+}
+
+#───────────────────────────────────────────────────────────────────────────────────────────────────
+# Methods
+#───────────────────────────────────────────────────────────────────────────────────────────────────
+
+# $Line->csv => ()
+#
+# Returns the list of comma separated values (csv) from the current line.
+#
 sub csv {
 	my $Line   = shift;
 	my $value  = "";
@@ -93,20 +135,27 @@ sub csv {
 	return @values;
 }
 
-sub coord {
-	my $Line = shift;
-	return sprintf("<%s:%d>", $Line->file, $Line->number);
-}
-
 #═══════════════════════════════════════════════════════════════════════════════════════════════════
 package Source;
 #═══════════════════════════════════════════════════════════════════════════════════════════════════
 
+# Source::close();
+#
+# Closes the source file being written and selects STDOUT.
+#
 sub close {
 	close(FILE);
 	select STDOUT;
 }
 
+# Source::glob(string) => (string)
+#
+# Returns a list of files from the glob string.  If the glob string contains
+# environment variable names, the are expanded before the glob and contracted
+# afterwards.
+#
+# e.g. Source::glob("$PWD/*.csv") => ("${PWD}/A.csv", "${PWD}/B.csv", ...)
+#
 sub glob {
 	my $glob  = shift;
 	my $map   = Variable::expansion($glob);
@@ -117,6 +166,13 @@ sub glob {
 	return @files;
 }
 
+# Source::line(filename) => (Line)
+#
+# Returns a list of Line objects from the give filename.  Environement variables
+# in filename are expanded.  Box drawing characters and comments following a #
+# are removed, as are leading and trailing spaces and the newline.  All white
+# space is reduced to a single character.
+#
 sub line {
 	my $file   = shift;
 	my $path   = Variable::expand($file);
@@ -140,6 +196,11 @@ sub line {
 	return @Lines;
 }
 
+# Source::open(filename)
+#
+# Opens the given filename for writting, expanding environment variables in
+# the filename if needed.
+#
 sub open {
 	my $file = shift;
 	my $path = Variable::expand($file);
@@ -151,6 +212,7 @@ sub open {
 		Console::error("Can't open $file for writing: $!");
 	}
 }
+
 
 
 1;
