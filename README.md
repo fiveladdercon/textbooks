@@ -19,7 +19,7 @@ Testbooks stores all data in a human readable text file.  Though there are
 commands that modify the text file, they are generally intended for querying or 
 bulk editing. The file can and should be edited manually, because manual editing
 is the best means to acheive certain basic outcomes. (For example: renaming or 
-restructuring the Chart of Accounts; or updating or deleting an import rules.)
+restructuring the Chart of Accounts; or updating or deleting import rules.)
 
 
 
@@ -66,7 +66,7 @@ uniquely identify an account with as few key strokes as possible.
 Names are prefixed with the `@` symbol on the command line to signify that the 
 remaining string is a Name, but the `@` symbol is not part of the Name itself.
 
-Hierarchy in the chart of accounts can be identified by separating them with 
+Hierarchy in the chart of accounts can be identified by separating levels with 
 colon (`:`) characters:
 
 `@exp:meals`  identifies  `**Exp**ense:Discretionary:Food & Drink:**Meals**`
