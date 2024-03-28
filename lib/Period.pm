@@ -46,8 +46,8 @@ sub start {
 
 # $Period->contains(Date) => 0|1
 #
-# Returns true if the Date supplied is or is after the start Date and is or is
-# before the end Date.
+# Returns true if the Date supplied is after the start Date and is before the 
+# end Date (inclusive).
 #
 sub contains {
 	my $Period = shift;
