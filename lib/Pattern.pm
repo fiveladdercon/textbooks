@@ -4,39 +4,31 @@ package Pattern;
 use Console();
 
 #-----------------------------------------------
-# Need:
+# Requirements:
 #-----------------------------------------------
 #
-# (A & B) | (C & !D) | (E & !F) ...
+# (A B) | (C & D) | (E & !F) ...
 #
 # 1) construct line-by-line from a file
 # 2) construct from a string on the command line
 #
-#   &   |   !     : unusable on the command line
 #   +   ^   -     : usable on the command line
-#           ~     : usable if not alone or
-#                   followed by /, as in a path
+#   &   |   !     : unusable on the command line
+#           ~
 # 
 #-----------------------------------------------
 # File Format:
 #-----------------------------------------------
 #
-# | A & B 
-# | C & !D
+# | A B 
+# | C & D
 # | E & !F
 #
 #-----------------------------------------------
 # Command Line:
 #-----------------------------------------------
 #
-# The command line is assembling one term in the
-# disjunction of conjunctions:
-#
-# import JCHQ HLOC JUSD VISA  => JCHQ | HLOC | JUSD | VISA
-#
-# allocate MCDONALD HARVEY TIM +HORTON => MCDONALD | HARVEY | TIM & HORTON
-#
-# allocate ESSO ~EXPRESSO PETROCAN => ESSO & !EXPRESSO | PETROCAN
+# @ARGV = (A, B, ^, C, +, D, ^, E, -, F)
 #
 
 sub new {
@@ -184,13 +176,13 @@ sub matched {
 			if ($exclude) {
 				if ($string =~ m/$term/i) {
 					$excluded = $string;
-					$excluded =~ s/$term/\e[31m$&\e[0m/gi;
+					$excluded =~ s/$term/&Console::red($&)/gie;
 					$all = 0;
 					last;
 				}
 			} else {
 				if ($string =~ m/$term/i) {
-					$included =~ s/$term/\e[32m$&\e[0m/gi;
+					$included =~ s/$term/&Console::green($&)/gie;
 				} else {
 					$all = 0;
 					last;
@@ -208,6 +200,7 @@ sub matched {
 	}
 	return ($included, $excluded);
 }
+
 
 
 1;
