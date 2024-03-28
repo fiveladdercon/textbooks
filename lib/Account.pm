@@ -182,8 +182,8 @@ sub balances {
 #
 # Returns the Account identifier as a highlighted display string.
 #
-# ledger => 1  includes the header drawing for ledger reporting
-# entry  => 1  includes the @ prefix for Entry reporting
+# ledger   => 1  includes the header drawing for ledger reporting
+# entry    => 1  includes the @ prefix for Entry reporting
 #
 sub display {
 	my $Account = shift;
@@ -259,7 +259,7 @@ sub put {
 #
 sub rebalance {
 	my $Account = shift; return if $Account->import or not $Account->balanced;
-	my @Actions = $Account->Actions;
+	my @Actions = $Account->Actions; return unless @Actions;
 	my $sign    = ($Account->type eq 'ASSET') ? 1 : -1;
 	my $balance = $Actions[0]->amount ? 0 : $Actions[0]->balance;
 	foreach my $Action (@Actions) {
