@@ -260,9 +260,10 @@ sub put {
 	my $debit   = &Amount::column($Action->{debit});
 	my $credit  = &Amount::column($Action->{credit});
 	return sprintf("%10s, %6s, %-44s, %10s, %10s\n", $date, $entry, $item, $debit, $credit) unless defined $Action->{balance};
-	my $balance = $Action->{balance};
+	#my $balance = sprintf("%10.2f", $Action->{balance}); $balance = s/-0.00$/ 0.00/;
+	my $balance = &Amount::column($Action->{balance}, 3);
 	my $settled = $Action->{settled} ? ' *' : '';
-	return sprintf("%10s, %6s, %-44s, %10s, %10s, %10.2f%s\n", $date, $entry, $item, $debit, $credit, $balance, $settled);
+	return sprintf("%10s, %6s, %-44s, %10s, %10s, %10s%s\n", $date, $entry, $item, $debit, $credit, $balance, $settled);
 }
 
 
