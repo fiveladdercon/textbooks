@@ -8,6 +8,7 @@ use Draw();
 use Entry();
 use Limit();
 use Name();
+use Merge();
 use Period();
 use Selection();
 use Source();
@@ -27,16 +28,21 @@ sub new {
 #───────────────────────────────────────────────────────────────────────────────────────────────────
 # Persistence
 #───────────────────────────────────────────────────────────────────────────────────────────────────
-# R Construct an Entity from a file                        get
-# R Save an Entity to file                                 put
+# R Construct an Entity from a GL file                     get
+# R Save an Entity to a GL file                            put
 
+# $Entity->get(%options)
+#
+# get Entity ($gl) => $Entity
+#
+# Loads the Entity from a GL file.
+#
+# get Entity $file
+# get()                  {file}
+# get(file   => $file)   $file
+# get(string => $string) $string
+#
 sub get {
-	#
-	# get Entity $file
-	# get()                  {file}
-	# get(file   => $file)   $file
-	# get(string => $string) $string
-	#
 	my $Entity  = shift; $Entity = new Entity(shift) unless ref $Entity;
 	my %options = @_;    
 	my $file    = $options{file} || $Entity->{file};
@@ -101,17 +107,33 @@ sub get {
 	return $Entity;
 }
 
+# $Entity->put(%options) => undef|string
+#
+# Writes the Entity to a GL file.  If no options are given, the Entity is 
+# written to STDOUT.  If the commit option is given, the Entity is written to 
+# the Entities file attribute.  If the file options is given, the Entity is 
+# written to the given file.  If the string option is given, the Entity is 
+# returned as a string.  
+#
+# If the open option is given, the Entity is opened, meaning all actions are
+# omitted and closing balances in balanced accounts are stored as opening
+# balances.  If the Period option is given, then opening balances have the
+# given start date.  Otherwise opening balances have the date of the closing
+# balance.  The Period option is only relevant when the open option is 
+# specified.
+#
+# -                : write to STDOUT
+# commit => 1      : write to FILE named $Entity->{file}
+# file   => string : write to FILE named string
+# string => 1      : return as a string
+# open   => 1      : omit actions and write closing balances as opening balances
+# Period => Period : date opening balances with the start date of the Period
+#
 sub put {
-	#
-	# put()                 STDOUT    -
-	# put(commit => 1)      {file}    -
-	# put(file => $file)    $file     -
-	# put(string => 1)      -         $string
-	# 
 	my  $Entity  = shift;
 	our %options = @_;  
 	our $output  = "";
-	my  $file    = $options{file};  $file = $Entity->{file} if $options{commit} and not defined $file;
+	my  $file    = $options{file}; $file = $Entity->{file} if $options{commit} and not defined $file;
 	# Redirect output
 	sub output { 
 		my $fmt  = shift; 
@@ -160,12 +182,16 @@ sub put {
 # R Add a new Account                                      createAccount
 # R Show the chart of Accounts                             readAccounts
 # R Filter the chart of Accounts                           readAccounts
-# ? Renumber an Account
-# ? Move an Account
-# ? Rename an Account
-# ? Delete an Account
+# - Renumber an Account                                    <edit GL>
+# - Move an Account                                        <edit GL>
+# - Rename an Account                                      <edit GL>
+# - Delete an Account                                      <edit GL>
 
-# Return an Account identified by Name or number.
+# $Entity->getAccount(identifier) => Account
+#
+# Returns the Account identified by Name, number or string or throws an error
+# if no Accounts or more than one Account is identified.
+#
 sub getAccount {
 	my $Entity     = shift;
 	my $identifier = shift;
@@ -188,7 +214,9 @@ sub getAccount {
 	}
 }
 
-# Return the list of Accounts optionaly by Name.
+# $Entity->getAccounts(Name=undef) => (Account)
+#
+# Returns the list of Accounts, optionaly filtered by the given Name.
 sub getAccounts {
 	my $Entity   = shift;
 	my $Name     = shift;
@@ -202,14 +230,17 @@ sub getAccounts {
 	return @Accounts;
 }
 
-# Add a new Account
+# $Entity->createAccount(type, number, parent, name, Line)
+#
+# Adds a new Account to the Entity.
+#
 sub createAccount {
 	my $Entity  = shift;
-	my $type    = shift;
-	my $number  = shift;
-	my $parent  = shift;
-	my $name    = shift;
-	my $Line    = shift;
+	my $type    = shift; # string
+	my $number  = shift; # string
+	my $parent  = shift; # string | Account
+	my $name    = shift; # string
+	my $Line    = shift; # Line
 	my $Account = new Account($type, $number, $parent, $name, $Line);
 	if (not defined $Line and defined $parent) {
 		# Find the Parent account if not already an Account
@@ -261,65 +292,85 @@ sub readAccounts {
 }
 
 my $CHART = <<'_';
-Usage: gl [OPTIONS] chart [-h | --help]
-                          [-c | --commit] 
-                          [-e | --explicit]                          
-                          [-f | --file CHART]
-                          [-i | --implicit]
-                          [-r | --renumber ACCOUNT NUMBER]
-                          [PATTERN ...]
 
-Displays the chart of account in implicit or explict format.
+Usage: textbooks GL chart 
+         [-h | --help]
+         [@NAME]
 
-The implicit format uses indentation to signal hierarchy, while the
-explicit format specifies all parent accounts.
+Displays the chart of accounts.  If a Name is supplied, only accounts that match
+the given Name are shown.
 
-If PATTERNs are specified, the explicit accounts that match the
-PATTERNs will be displayed.
-
-Unless a CHART file is specified with --file, the chart file for the
-ENTITY will be used (ENTITY.ch).
-
-An account can be renumbered using the --renumber option, and the
-change will only be commited to the CHART file when the --commit
-option is specified.
 _
-
 sub chart {
 	my $Entity = shift;
 	my @args   = @_;
-	my $type;
-	my $number;
-	my $parent;
-	my @name;
+	# my $type;
+	# my $number;
+	# my $parent;
+	my $Name;
 
 	while (@args) {
 		my $op = shift @args;
-		if    (($op eq "-a") or ($op eq "--asset")    ) { $type = 'ASSET';       }
-		elsif (($op eq "-l") or ($op eq "--liability")) { $type = 'LIABILITY';   }
-		elsif (($op eq "-i") or ($op eq "--income")   ) { $type = 'INCOME';      }
-		elsif (($op eq "-e") or ($op eq "--expense")  ) { $type = 'EXPENSE';     }
-		elsif (($op eq "-p") or ($op eq "--parent")   ) { $parent = shift @args; }
-		elsif (defined $type and not defined $number  ) { $number = $op;         }
-		else                                            { push @name, $op;       }
+		if    (($op eq "-h") or ($op eq "--help")) { return &usage($CHART); }
+		else                                       { $Name = new Name $op;  }
+		# if    (($op eq "-a") or ($op eq "--asset")    ) { $type = 'ASSET';       }
+		# elsif (($op eq "-l") or ($op eq "--liability")) { $type = 'LIABILITY';   }
+		# elsif (($op eq "-i") or ($op eq "--income")   ) { $type = 'INCOME';      }
+		# elsif (($op eq "-e") or ($op eq "--expense")  ) { $type = 'EXPENSE';     }
+		# elsif (($op eq "-p") or ($op eq "--parent")   ) { $parent = shift @args; }
+		# elsif (defined $type and not defined $number  ) { $number = $op;         }
+		# else                                            { $Name = new Name($op); }
 	}
 
-	my $name = join(" ", @name);
+	# if (defined $type) {
+	# 	return Console::error("Account number is missing.") unless defined $number;
+	# 	return Console::error("Account name is missing."  ) unless @name;
+	# 	foreach my $Account ($Entity->getAccounts()) {
+	# 		return Console::error("Account number $number is %s.", $Account->identifier) if $Account->number eq $number;
+	# 	}
+	# 	return if defined $parent and not defined $Entity->getAccount($parent);
+	# 	my $Account = $Entity->createAccount($type, $number, $parent, $name);
+	# 	Console::stdout($Entity->readAccounts(number => $number));
+	# } else {
+	# 	Console::stdout($Entity->readAccounts(Name => new Name($name)));
+	# }
 
-	if (defined $type) {
-		return Console::error("Account number is missing.") unless defined $number;
-		return Console::error("Account name is missing."  ) unless @name;
-		foreach my $Account ($Entity->getAccounts()) {
-			return Console::error("Account number $number is %s.", $Account->identifier) if $Account->number eq $number;
-		}
-		return if defined $parent and not defined $Entity->getAccount($parent);
-		my $Account = $Entity->createAccount($type, $number, $parent, $name);
-		Console::stdout($Entity->readAccounts(number => $number));
-	} else {
-		Console::stdout($Entity->readAccounts(Name => new Name($name)));
-	}
+	Console::stdout($Entity->readAccounts(Name => $Name));
 
 	return 1;
+}
+
+sub getParent {
+	my $Entity = shift;
+	my $Name   = shift;
+	my $Parent = undef;
+	my $min    = undef;
+	# a Name selects a parent and all it's children, so find the smallest generation
+	foreach my $Account ($Entity->getAccounts($Name)) {
+		my $gen = $Account->generation;
+		if (not defined $min or $gen < $min) {
+			$Parent = $Account;
+			$min    = $gen;
+		}
+	}
+	return $Parent;
+}
+
+sub asset {
+	my $Entity = shift;
+	my @args   = @_;
+	my @name   = ();
+	my $Name;
+
+	while (@args) {
+		my $op = shift @args;
+		if    (($op eq "-h") or ($op eq "--help"  )) { return &usage($CHART); }
+		elsif ($op =~ m/^@/                        ) { $Name = new Name($op); }
+		else                                         { push @name, $op;       }
+	}
+
+	Console::stdout("%s\n", $Entity->getParent($Name)->display);
+
 }
 
 #───────────────────────────────────────────────────────────────────────────────────────────────────
@@ -750,69 +801,10 @@ sub reconcileRecords {
 
 my $IMPORT = <<'_';
 Usage: gl [OPTIONS] import [-h | --help]
-                           [-c | --commit] 
-                           [-d | --destination ACCOUNT STATEMENT ...]
-                           [-f | --file RULES]
-                           [-p | --period PERIOD]
-                           [PATTERN ...]
-
+                           
 Imports transactions from .csv bank statements into the asset or liability
 accounts in the general ledger.  
 
-At the lowest level, the source STATEMENTs and destination ACCOUNT can
-be specified explicitly as a series of --destination options.
-
-These rules can be captured in a import RULES file and passed in with
-the --file option.  If the rules are saved as the ENTITY import rules
-file (ENTITY.ir), the --file option can be omitted.  
-
-The format for the RULES file is:
-
-IMPORT <ACCOUNT> FROM <STATEMENT>
-
-The <STATEMENT> can be a glob to succinctly specify many files at once,
-and contain environment variable references:
-
-IMPORT 10000 FROM $STATEMENTS/Checking/*.csv
-IMPORT 20000 FROM $STATEMENTS/Savings/*.csv
-
-Specifying the import rules this way will mean that new statements
-that get added will get imported without changing the rules.
-
-Regardless of how the statements get collected, which statements get
-imported can be filtered by either specifying one or more filter PATTERNs 
-and/or a statement PERIOD.
-
-PATTERNS are regular expressions.  If they start with ! or ~ then the PATTERN
-excludes things.
-
-
-PERIOD
-------
-
-A period is a span of time between a start date and an end date:
-
-YYYY[-MM[-DD]][:YYYY[-MM[-DD]]]
-
-If an end date is not specified, the start date is used.
-
-If a date does not specify the day, 1 is used if the date is a start date
-or 31 is used if the date is the end date.
-
-YYYY-MM:yyyy-mm == YYYY-MM-01:yyyy-mm-31
-
-If a date does not specify the month, 1 is used if the date is a start date
-and 12 is used if the date is the end date
-
-YYYY:yyyy == YYYY-01-01:yyyy-12-31
-
-This allows for succinctly specifying a particular month:
-
-YYYY-MM == YYYY-MM-01:YYYY-12-31
-
-Or a particular year:
-
-YYYY == YYYY-01-01:YYYY-12-31
 _
 
 sub import {
@@ -825,6 +817,7 @@ sub import {
 	my $Name;
 	my $source;
 	my $orig = 0;
+	my $zip = 0;
 
 	while (@args) {
 		my $op = shift @args;
@@ -835,6 +828,7 @@ sub import {
 		elsif (($op eq "-a") or ($op eq "--account")) { $Name   = new Name   shift @args; }
 		elsif (($op =~ m/^@/)                       ) { $Name   =  new Name($op);         }
 		elsif (($op eq "--orig")) { $orig = 1; }
+		elsif (($op eq "--zip")) { $zip = 1;}
 		else                                          { $Pattern->term($op);              }
 	}
 
@@ -849,6 +843,8 @@ sub import {
 		Name    => $Name, 
 		Pattern => $Pattern,
 	)) if $rules or $files;
+
+	return Merge::zip($Entity, Name => $Name, Pattern => $Pattern, Period => $Period) if $zip;
 
 	$Entity->createRecords(Name => $Name, Pattern => $Pattern, Period => $Period) unless $orig;
 	$Entity->createRecordsOrig(Name => $Name, Pattern => $Pattern, Period => $Period) if $orig;
@@ -954,7 +950,7 @@ sub selectActions {
 			next if $filter->{Name} and not $filter->{Name}->matches($Account->identifier);
 			$Account->{Name} = $filter->{Name};
 			my $Actions = [];
-			if ($Account->import and (($side eq 'source') or ($filter->{Pattern}))) {
+			if (($Account->import or 1) and (($side eq 'source') or ($filter->{Pattern}))) {
 				#Console::error('%s sink identifies the %s source.', $filter->{Name}->display, $Account->{Name}->display) if $Account->{Name} and $filter->{Name};
 				foreach my $Action ($Account->Actions) {
 					next if defined $Action->Entry;  # Need entry selection
@@ -1735,7 +1731,7 @@ sub open {
 
 	while (@args) {
 		my $op = shift @args;
-		if    (($op eq "-h") or ($op eq "--help"  )) { return &usage($REBALANCE);        }
+		if    (($op eq "-h") or ($op eq "--help"  )) { return &usage($OPEN);             }
 		elsif (($op eq "-p") or ($op eq "--period")) { $Period = new Period shift @args; }
 		else                                         { $file = $op;                      }
 	}
@@ -1765,10 +1761,10 @@ Manages the text based books for the specified general ledger (GL).
 
 OPTIONS :
 
-	The following options can be specified before or after the command. All 
+	The following options can be specified before or after the COMMAND. All 
 	other options or arguments are passed to the command.  Note that options 
 	controlling the overall sesssion have upper case short forms, while options
-	for commands have lower case short forms.
+	for COMMANDS have lower case short forms.
 
 	--help, -h    : display this help or the help for the command when
 	                specified after the command.
@@ -1785,12 +1781,14 @@ COMMANDS :
     --------------
 
 	chart         : Create, display & update the chart of accounts.
+	open          : Create a new GL from the existing GL.
+
 
 	Data Gathering Commands
 	-----------------------
 
-	import        : Create & update import rules and import single sided actions.
-	reconcile     : Validate the integrity of balances.
+	import        : Create import rules and import single sided actions.
+	reconcile     : Validate the integrity of imported balances.
 	deport        : Deport previously imported actions.
 
 	Coarse Allocation Commands
@@ -1798,16 +1796,18 @@ COMMANDS :
 
 	alloc         : Create transactions by applying existing selection rules
 	                to newly imported single sided actions.
-	select        : Create & update new selection rules to reconstruct 
-	                transactions from single sided actions.
+	select        : Querry single sided actions and create & update new 
+	                selection rules to reconstruct transactions from single 
+	                sided actions.
 	items         : Find and display the most frequent unallocated items.
 
 	Fine Allocation Commands
 	------------------------
 
-	entry         : Find & delete specific transactions.
+	entry         : Find & show or delete specific transactions.
 	enter         : Create transactions.
-	rebalance     : Recalculate balances in asset & liability accounts.
+	rebalance     : Recalculate balances in selected asset & liability accounts.
+	reorder       : Reorder actions in selected accounts.
 
 	Reporting Commands
 	------------------
@@ -1816,10 +1816,50 @@ COMMANDS :
 	                and other reports.
 	rules         : display saved import & selection rules.
 
-	Finishing Commands
-	------------------
 
-	open          : Create a new GL from the existing GL.
+CONVENTIONS
+
+	The commands use Names, Patterns and Periods to select actions & accounts
+	in the general ledger.
+
+	Names
+	-----
+
+	A Name is used to select one or more accounts from the chart of accounts.
+
+	Patterns
+	--------
+
+	A Pattern is used to select one or more actions by item.
+
+	Period
+	------
+
+	A Period is used to select one or more actions by date.
+
+	Periods have the form YYYY-MM-DD:YYYY-MM-DD where the first date specified 
+	is the start of the period (inclusive) and the second date is the end of the 
+	period (inclusive).
+
+	If the day is not specified for a date, the first day of the month is 
+	assumed for the period start and the last day of the month is assumed for 
+	the period end. e.g. 
+
+		YYYY-06:YYYY-06 is equivalent to YYYY-06-01:YYYY-06-30
+
+	If the month is not specified for a date, the first month of the year is 
+	assumed for the period start and the last month of the year is assumed the 
+	period end. e.g. 
+
+		YYYY:YYYY is equivalent to YYYY-01-01:YYYY-12-31
+
+	If the second date is not specified, it is assumed to be the same
+	date as the first date, with the assumptions that come with the fact
+	that it is the end date.  e.g.  
+
+		YYYY-MM-DD is eqivalent to YYYY-MM-DD:YYYY-MM-DD  - a day
+		YYYY-06    is eqivalent to YYYY-06-01:YYYY-06-30  - a month
+		YYYY       is eqivalent to YYYY-01-01:YYYY-12-31  - a year
 
 _
 
@@ -1837,31 +1877,33 @@ sub usage {
 sub session {
 	my @argv   = @_;
 	my $commit = 0;
-	my $entity;
+	my $gl;
 	my $command;
 	my @args;
 	my $success;
 
 	while (@argv) {
 		my $op = shift @argv;
-		if    (($op eq "-C") or ($op eq "--commit"  )) { $commit             = 1; }
-		elsif (($op eq "-M") or ($op eq "--mute"    )) { $Console::VERBOSITY = 0; }
-		elsif (($op eq "-V") or ($op eq "--verbose" )) { $Console::VERBOSITY = 2; }
-		elsif (($op eq "-P") or ($op eq "--profuse" )) { $Console::VERBOSITY = 3; }
-		elsif (($op eq "-N") or ($op eq "--no-color")) { $Console::COLOR     = 0; }
-		elsif (defined $command                      ) { push @args, $op;         }
-		elsif (($op eq "-h") or ($op eq "--help"    )) { return usage($SESSION);  }
-		elsif (not defined $entity                   ) { $entity    = $op;        }
-		else                                           { $command   = $op;        }
+		if    (($op eq "-C") or ($op eq "--commit"  )) { $commit             = 1;                 }
+		elsif (($op eq "-M") or ($op eq "--mute"    )) { $Console::VERBOSITY = $Console::MUTE;    }
+		elsif (($op eq "-V") or ($op eq "--verbose" )) { $Console::VERBOSITY = $Console::VERBOSE; }
+		elsif (($op eq "-P") or ($op eq "--profuse" )) { $Console::VERBOSITY = $Console::PROFUSE; }
+		elsif (($op eq "-N") or ($op eq "--no-color")) { $Console::COLOR     = 0;                 }
+		elsif (defined $command                      ) { push @args, $op;                         }
+		elsif (($op eq "-h") or ($op eq "--help"    )) { return usage($SESSION);                  }
+		elsif (not defined $gl                       ) { $gl        = $op;                        }
+		else                                           { $command   = $op;                        }
 	}
 
-	usage($SESSION, "No <entity> specified.") unless defined $entity;
+	usage($SESSION, "No GL specified.") unless defined $gl;
 	$command = "report" unless defined $command;
 
-	my $Entity = -e $entity ? get Entity($entity) : new Entity();
+	my $Entity = -e $gl ? get Entity($gl) : new Entity();
 
 	# Setup
 	if    ($command eq "chart"    ) { $success = $Entity->chart(@args);                    }
+	elsif ($command eq "asset"    ) { $success = $Entity->asset(@args);                    }
+	elsif ($command eq "open"     ) { $success = $Entity->open(@args);                     }
 	# Data Gathering
 	elsif ($command eq "import"   ) { $success = $Entity->import(@args);                   }
 	elsif ($command eq "reconcile") { $success = $Entity->reconcile(@args);                }
@@ -1878,11 +1920,10 @@ sub session {
 	# Reporting
 	elsif ($command eq "report"   ) { $success = $Entity->report(@args);                   }
 	elsif ($command eq "rules"    ) { $success = $Entity->rules(@args);                    }
-	# Finishing
-	elsif ($command eq "open"     ) { $success = $Entity->open(@args);                     }
+	# Unknown
 	else                            { return usage($SESSION, "Invalid COMMAND: $command"); }
 
-	$Entity->put(file => $entity) if $success and $commit;
+	$Entity->put(file => $gl) if $success and $commit;
 
 	return 1;
 }
