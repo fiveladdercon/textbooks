@@ -13,10 +13,11 @@ use Console();
 #
 sub column {
 	my $amount = shift;
-	my $zero   = shift;
-	return Console::red("%10.2f", $amount) if $amount < 0;
-	return sprintf("%10.2f", $amount)      if $amount > 0;
-	return sprintf("%10.2f", 0)            if $zero;
+	my $flags  = shift;
+	return sprintf("%10.2f", $amount)      if $amount <= -.01 and $flags & 2;
+	return Console::red("%10.2f", $amount) if $amount <= -.01;
+	return sprintf("%10.2f", $amount)      if $amount >=  .01;
+	return sprintf("%10.2f", 0)            if $flags & 1;
 	return " " x 10;
 }
 
